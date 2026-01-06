@@ -130,10 +130,6 @@ class NerfactoModelConfig(ModelConfig):
     """Average initial density output from MLP. """
     camera_optimizer: CameraOptimizerConfig = field(default_factory=lambda: CameraOptimizerConfig(mode="SO3xR3"))
     """Config of the camera optimizer to use"""
-    depth_smoothness_mult: float = 0.01
-    depth_loss_type: Literal["none", "l1", "huber"] = "l1"
-    depth_loss_mult: float = 0.1
-    depth_loss_schedule: Literal["constant", "decay"] = "constant"
 
 
 class NerfactoModel(Model):
@@ -362,33 +358,10 @@ class NerfactoModel(Model):
             metrics_dict["distortion"] = distortion_loss(outputs["weights_list"], outputs["ray_samples_list"])
 
         self.camera_optimizer.get_metrics_dict(metrics_dict)
-        
-        if "normals" in outputs and "indices" in batch:
-            normals = torch.nn.functional.normalize(outputs["normals"], dim=-1)
-            indices = batch["indices"]  # [N, 2]
-
-            # берём только горизонтальных соседей
-            mask = (indices[:-1, 0] == indices[1:, 0]) & (indices[:-1, 1] + 1 == indices[1:, 1])
-
-            if mask.any():
-                n1 = normals[:-1][mask]
-                n2 = normals[1:][mask]
-                metrics_dict["normal_consistency"] = torch.mean(torch.sum(n1 * n2, dim=-1))
-        if "expected_depth" in outputs and "indices" in batch:
-            depth = outputs["expected_depth"]
-            indices = batch["indices"]
-
-            mask = (indices[:-1, 0] == indices[1:, 0]) & (indices[:-1, 1] + 1 == indices[1:, 1])
-
-            if mask.any():
-                depth_grad = torch.abs(depth[:-1][mask] - depth[1:][mask])
-                metrics_dict["depth_smoothness"] = depth_grad.mean()
-                
         return metrics_dict
 
     def get_loss_dict(self, outputs, batch, metrics_dict=None):
         loss_dict = {}
-
         image = batch["image"].to(self.device)
         pred_rgb, gt_rgb = self.renderer_rgb.blend_background_for_loss_computation(
             pred_image=outputs["rgb"],
@@ -396,58 +369,26 @@ class NerfactoModel(Model):
             gt_image=image,
         )
 
-        # ---------------- Depth smoothness loss (geometry) ----------------
-        if self.training and "expected_depth" in outputs and "indices" in batch:
-            if self.config.depth_loss_type != "none":
-                depth = outputs["expected_depth"]
-                indices = batch["indices"]
-
-                # горизонтальные соседи
-                mask = (indices[:-1, 0] == indices[1:, 0]) & (indices[:-1, 1] + 1 == indices[1:, 1])
-
-                if mask.any():
-                    depth_diff = depth[:-1][mask] - depth[1:][mask]
-
-                    if self.config.depth_loss_type == "l1":
-                        depth_loss = torch.abs(depth_diff).mean()
-                    elif self.config.depth_loss_type == "huber":
-                        depth_loss = torch.nn.functional.smooth_l1_loss(
-                            depth[:-1][mask], depth[1:][mask]
-                        )
-                    # scale by multiplier
-                    loss_dict["depth_smoothness_loss"] = self.config.depth_loss_mult * depth_loss
-
-
-        # ---------------- RGB loss ----------------
         loss_dict["rgb_loss"] = self.rgb_loss(gt_rgb, pred_rgb)
-
         if self.training:
-            # interlevel loss
             loss_dict["interlevel_loss"] = self.config.interlevel_loss_mult * interlevel_loss(
                 outputs["weights_list"], outputs["ray_samples_list"]
             )
-
-            # distortion loss
             assert metrics_dict is not None and "distortion" in metrics_dict
             loss_dict["distortion_loss"] = self.config.distortion_loss_mult * metrics_dict["distortion"]
-
-            # normal-based losses
             if self.config.predict_normals:
-                loss_dict["orientation_loss"] = (
-                    self.config.orientation_loss_mult *
-                    torch.mean(outputs["rendered_orientation_loss"])
+                # orientation loss for computed normals
+                loss_dict["orientation_loss"] = self.config.orientation_loss_mult * torch.mean(
+                    outputs["rendered_orientation_loss"]
                 )
 
-                loss_dict["pred_normal_loss"] = (
-                    self.config.pred_normal_loss_mult *
-                    torch.mean(outputs["rendered_pred_normal_loss"])
+                # ground truth supervision for normals
+                loss_dict["pred_normal_loss"] = self.config.pred_normal_loss_mult * torch.mean(
+                    outputs["rendered_pred_normal_loss"]
                 )
-
-            # camera optimizer loss
+            # Add loss from camera optimizer
             self.camera_optimizer.get_loss_dict(loss_dict)
-
         return loss_dict
-
 
     def get_image_metrics_and_images(
         self, outputs: Dict[str, torch.Tensor], batch: Dict[str, torch.Tensor]
@@ -486,23 +427,5 @@ class NerfactoModel(Model):
                 accumulation=outputs["accumulation"],
             )
             images_dict[key] = prop_depth_i
-
-        images_dict = {
-            "img": combined_rgb,
-            "accumulation": acc,
-            "depth": depth,
-        }
-
-        if not self.training and "normals" in outputs:
-            normals_vis = (outputs["normals"] + 1.0) * 0.5
-            pred_normals_vis = (outputs["pred_normals"] + 1.0) * 0.5
-
-            # гарантируем HWC
-            if normals_vis.ndim == 3 and normals_vis.shape[-1] == 3:
-                images_dict["normals"] = normals_vis
-            if pred_normals_vis.ndim == 3 and pred_normals_vis.shape[-1] == 3:
-                images_dict["pred_normals"] = pred_normals_vis
-
-
 
         return metrics_dict, images_dict
