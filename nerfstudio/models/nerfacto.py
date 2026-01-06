@@ -487,4 +487,22 @@ class NerfactoModel(Model):
             )
             images_dict[key] = prop_depth_i
 
+        images_dict = {
+            "img": combined_rgb,
+            "accumulation": acc,
+            "depth": depth,
+        }
+
+        if not self.training and "normals" in outputs:
+            normals_vis = (outputs["normals"] + 1.0) * 0.5
+            pred_normals_vis = (outputs["pred_normals"] + 1.0) * 0.5
+
+            # гарантируем HWC
+            if normals_vis.ndim == 3 and normals_vis.shape[-1] == 3:
+                images_dict["normals"] = normals_vis
+            if pred_normals_vis.ndim == 3 and pred_normals_vis.shape[-1] == 3:
+                images_dict["pred_normals"] = pred_normals_vis
+
+
+
         return metrics_dict, images_dict
