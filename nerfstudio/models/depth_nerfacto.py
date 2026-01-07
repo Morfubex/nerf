@@ -38,6 +38,12 @@ class DepthSupervisionMode(str, Enum):
     L1 = "l1"
     L2 = "l2"
     HUBER = "huber"
+    
+class DepthWeightMode(str, Enum):
+    CONSTANT = "constant"
+    LINEAR = "linear"
+    DECAY = "decay"
+    PEAK = "peak"
 
 @dataclass
 class DepthNerfactoModelConfig(NerfactoModelConfig):
@@ -62,6 +68,13 @@ class DepthNerfactoModelConfig(NerfactoModelConfig):
     depth_supervision: DepthSupervisionMode = DepthSupervisionMode.DSNERF
     depth_loss_mult: float = 1e-3
     huber_delta: float = 0.05
+    
+    depth_weight_mode: DepthWeightMode = DepthWeightMode.CONSTANT
+    depth_ramp_up_steps: int = 2000
+    depth_decay_rate: float = 0.99985
+    depth_peak_step: int = 10000
+    depth_peak_sigma: float = 5000
+
 
 
 
@@ -137,28 +150,34 @@ class DepthNerfactoModel(NerfactoModel):
         gt_depth = batch["depth_image"].to(self.device)
         depth_mask = gt_depth > 0
 
+        # -------------------------
+        # 1. DEPTH LOSS COMPUTATION
+        # -------------------------
         mode = self.config.depth_supervision
 
         if mode == DepthSupervisionMode.DSNERF:
-            #DS-NeRF
             assert "depth_loss" in metrics_dict or "depth_ranking" in metrics_dict
 
-            if "depth_ranking" in metrics_dict:
-                weight = self.config.depth_loss_mult * np.interp(self.step, [0, 2000], [0, 0.2])
-                loss_dict["depth_ranking"] = weight * metrics_dict["depth_ranking"]
+            depth_loss = metrics_dict.get(
+                "depth_loss", torch.tensor(0.0, device=self.device)
+            )
 
-            if "depth_loss" in metrics_dict:
-                loss_dict["depth_loss"] = self.config.depth_loss_mult * metrics_dict["depth_loss"]
+            if "depth_ranking" in metrics_dict:
+                rank_weight = np.interp(self.step, [0, 2000], [0, 0.2])
+                loss_dict["depth_ranking"] = (
+                    rank_weight * self.config.depth_loss_mult * metrics_dict["depth_ranking"]
+                )
 
         elif mode == DepthSupervisionMode.L1:
-            depth_loss = torch.abs(pred_depth[depth_mask] - gt_depth[depth_mask]).mean()
-            loss_dict["depth_loss"] = self.config.depth_loss_mult * depth_loss
+            depth_loss = torch.abs(
+                pred_depth[depth_mask] - gt_depth[depth_mask]
+            ).mean()
 
         elif mode == DepthSupervisionMode.L2:
             depth_loss = torch.nn.functional.mse_loss(
-                pred_depth[depth_mask], gt_depth[depth_mask]
+                pred_depth[depth_mask],
+                gt_depth[depth_mask],
             )
-            loss_dict["depth_loss"] = self.config.depth_loss_mult * depth_loss
 
         elif mode == DepthSupervisionMode.HUBER:
             depth_loss = torch.nn.functional.smooth_l1_loss(
@@ -166,12 +185,45 @@ class DepthNerfactoModel(NerfactoModel):
                 gt_depth[depth_mask],
                 beta=self.config.huber_delta,
             )
-            loss_dict["depth_loss"] = self.config.depth_loss_mult * depth_loss
 
         else:
             raise ValueError(f"Unknown depth supervision mode: {mode}")
 
+        # -------------------------
+        # 2. DEPTH WEIGHT STRATEGY
+        # -------------------------
+        wmode = self.config.depth_weight_mode
+
+        if wmode == DepthWeightMode.CONSTANT:
+            alpha = 1.0
+
+        elif wmode == DepthWeightMode.LINEAR:
+            alpha = min(1.0, self.step / self.config.depth_ramp_up_steps)
+
+        elif wmode == DepthWeightMode.DECAY:
+            alpha = self.config.depth_decay_rate ** self.step
+
+        elif wmode == DepthWeightMode.PEAK:
+            t = torch.tensor(
+                float(self.step),
+                device=pred_depth.device
+            )
+            mu = self.config.depth_peak_step
+            sigma = self.config.depth_peak_sigma
+
+            alpha = torch.exp(-((t - mu) ** 2) / (2 * sigma ** 2))
+
+
+        else:
+            raise ValueError(f"Unknown depth weight mode: {wmode}")
+
+        # -------------------------
+        # 3. FINAL DEPTH LOSS
+        # -------------------------
+        loss_dict["depth_loss"] = alpha * self.config.depth_loss_mult * depth_loss
+
         return loss_dict
+
 
     def get_image_metrics_and_images(
         self, outputs: Dict[str, torch.Tensor], batch: Dict[str, torch.Tensor]
