@@ -44,6 +44,7 @@ class DepthLossType(Enum):
     DS_NERF = 1
     URF = 2
     SPARSENERF_RANKING = 3
+    
 
 
 FORCE_PSEUDODEPTH_LOSS = False

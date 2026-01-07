@@ -16,6 +16,7 @@
 Nerfacto augmented with depth supervision.
 """
 
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -23,6 +24,7 @@ from typing import Dict, Tuple, Type
 
 import numpy as np
 import torch
+from enum import Enum
 
 from nerfstudio.cameras.rays import RayBundle
 from nerfstudio.model_components import losses
@@ -30,6 +32,12 @@ from nerfstudio.model_components.losses import DepthLossType, depth_loss, depth_
 from nerfstudio.models.nerfacto import NerfactoModel, NerfactoModelConfig
 from nerfstudio.utils import colormaps
 
+
+class DepthSupervisionMode(str, Enum):
+    DSNERF = "dsnerf"
+    L1 = "l1"
+    L2 = "l2"
+    HUBER = "huber"
 
 @dataclass
 class DepthNerfactoModelConfig(NerfactoModelConfig):
@@ -51,6 +59,10 @@ class DepthNerfactoModelConfig(NerfactoModelConfig):
     depth_loss_type: DepthLossType = DepthLossType.DS_NERF
     """Depth loss type. Note that `PairPixelSampler` has to be used for `DepthLossType.SPARSENERF_RANKING`
     to work as expected."""
+    depth_supervision: DepthSupervisionMode = DepthSupervisionMode.DSNERF
+    depth_loss_mult: float = 1e-3
+    huber_delta: float = 0.05
+
 
 
 class DepthNerfactoModel(NerfactoModel):
@@ -79,6 +91,8 @@ class DepthNerfactoModel(NerfactoModel):
 
     def get_metrics_dict(self, outputs, batch):
         metrics_dict = super().get_metrics_dict(outputs, batch)
+        
+        
         if self.training:
             if (
                 losses.FORCE_PSEUDODEPTH_LOSS
@@ -113,16 +127,50 @@ class DepthNerfactoModel(NerfactoModel):
 
     def get_loss_dict(self, outputs, batch, metrics_dict=None):
         loss_dict = super().get_loss_dict(outputs, batch, metrics_dict)
-        if self.training:
-            assert metrics_dict is not None and ("depth_loss" in metrics_dict or "depth_ranking" in metrics_dict)
+
+        if not self.training:
+            return loss_dict
+
+        assert metrics_dict is not None
+
+        pred_depth = outputs["depth"]
+        gt_depth = batch["depth_image"].to(self.device)
+        depth_mask = gt_depth > 0
+
+        mode = self.config.depth_supervision
+
+        if mode == DepthSupervisionMode.DSNERF:
+            #DS-NeRF
+            assert "depth_loss" in metrics_dict or "depth_ranking" in metrics_dict
+
             if "depth_ranking" in metrics_dict:
-                loss_dict["depth_ranking"] = (
-                    self.config.depth_loss_mult
-                    * np.interp(self.step, [0, 2000], [0, 0.2])
-                    * metrics_dict["depth_ranking"]
-                )
+                weight = self.config.depth_loss_mult * np.interp(self.step, [0, 2000], [0, 0.2])
+                loss_dict["depth_ranking"] = weight * metrics_dict["depth_ranking"]
+
             if "depth_loss" in metrics_dict:
                 loss_dict["depth_loss"] = self.config.depth_loss_mult * metrics_dict["depth_loss"]
+
+        elif mode == DepthSupervisionMode.L1:
+            depth_loss = torch.abs(pred_depth[depth_mask] - gt_depth[depth_mask]).mean()
+            loss_dict["depth_loss"] = self.config.depth_loss_mult * depth_loss
+
+        elif mode == DepthSupervisionMode.L2:
+            depth_loss = torch.nn.functional.mse_loss(
+                pred_depth[depth_mask], gt_depth[depth_mask]
+            )
+            loss_dict["depth_loss"] = self.config.depth_loss_mult * depth_loss
+
+        elif mode == DepthSupervisionMode.HUBER:
+            depth_loss = torch.nn.functional.smooth_l1_loss(
+                pred_depth[depth_mask],
+                gt_depth[depth_mask],
+                beta=self.config.huber_delta,
+            )
+            loss_dict["depth_loss"] = self.config.depth_loss_mult * depth_loss
+
+        else:
+            raise ValueError(f"Unknown depth supervision mode: {mode}")
+
         return loss_dict
 
     def get_image_metrics_and_images(
