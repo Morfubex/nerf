@@ -162,6 +162,10 @@ class Trainer:
             local_rank=self.local_rank,
             grad_scaler=self.grad_scaler,
         )
+        
+        if hasattr(self.pipeline.model, "set_max_steps"):
+            self.pipeline.model.set_max_steps(self.config.max_num_iterations)
+
         self.optimizers = self.setup_optimizers()
 
         # set up viewer if enabled
@@ -219,6 +223,8 @@ class Trainer:
         )
         writer.put_config(name="config", config_dict=dataclasses.asdict(self.config), step=0)
         profiler.setup_profiler(self.config.logging, writer_log_path)
+
+    
 
     def setup_optimizers(self) -> Optimizers:
         """Helper to set up the optimizers

@@ -20,7 +20,7 @@ Nerfacto augmented with depth supervision.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Dict, Tuple, Type
+from typing import Dict, Tuple, Type, Optional
 
 import numpy as np
 import torch
@@ -50,7 +50,6 @@ class DepthNerfactoModelConfig(NerfactoModelConfig):
     """Additional parameters for depth supervision."""
 
     _target: Type = field(default_factory=lambda: DepthNerfactoModel)
-    depth_loss_mult: float = 1e-3
     """Lambda of the depth loss."""
     is_euclidean_depth: bool = False
     """Whether input depth maps are Euclidean distances (or z-distances)."""
@@ -70,10 +69,10 @@ class DepthNerfactoModelConfig(NerfactoModelConfig):
     huber_delta: float = 0.05
     
     depth_weight_mode: DepthWeightMode = DepthWeightMode.CONSTANT
-    depth_ramp_up_steps: int = 2000
-    depth_decay_rate: float = 0.99985
-    depth_peak_step: int = 10000
-    depth_peak_sigma: float = 5000
+    depth_ramp_up_ratio: float = 0.3
+    depth_decay_final: float = 0.1
+    depth_peak_ratio: float = 0.5
+    depth_peak_width_ratio: float = 0.4
 
 
 
@@ -87,14 +86,20 @@ class DepthNerfactoModel(NerfactoModel):
 
     config: DepthNerfactoModelConfig
 
+
     def populate_modules(self):
         """Set the fields and modules."""
         super().populate_modules()
 
+        self.max_steps: Optional[int] = None
+        
         if self.config.should_decay_sigma:
             self.depth_sigma = torch.tensor([self.config.starting_depth_sigma])
         else:
             self.depth_sigma = torch.tensor([self.config.depth_sigma])
+        
+    def set_max_steps(self, max_steps: int):
+        self.max_steps = max_steps
 
     def get_outputs(self, ray_bundle: RayBundle):
         outputs = super().get_outputs(ray_bundle)
@@ -150,6 +155,11 @@ class DepthNerfactoModel(NerfactoModel):
         gt_depth = batch["depth_image"].to(self.device)
         depth_mask = gt_depth > 0
 
+        assert self.max_steps is not None, "max_steps not initialized"
+
+        T = self.max_steps
+        t = torch.tensor(float(self.step), device=self.device)
+        
         # -------------------------
         # 1. DEPTH LOSS COMPUTATION
         # -------------------------
@@ -198,25 +208,24 @@ class DepthNerfactoModel(NerfactoModel):
             alpha = 1.0
 
         elif wmode == DepthWeightMode.LINEAR:
-            alpha = min(1.0, self.step / self.config.depth_ramp_up_steps)
+            ramp_steps = int(self.config.depth_ramp_up_ratio * T)
+            alpha = torch.clamp(t / max(1, ramp_steps), max=1.0)
+
 
         elif wmode == DepthWeightMode.DECAY:
-            alpha = self.config.depth_decay_rate ** self.step
+            alpha = torch.exp(
+                torch.log(torch.tensor(self.config.depth_decay_final, device=self.device))
+                * (t / T)
+            )
 
         elif wmode == DepthWeightMode.PEAK:
-            t = torch.tensor(
-                float(self.step),
-                device=pred_depth.device
+            peak_step = self.config.depth_peak_ratio * T
+            sigma = self.config.depth_peak_width_ratio * T
+            alpha = torch.exp(
+                -((t - peak_step) ** 2) / (2 * sigma ** 2)
             )
-            mu = self.config.depth_peak_step
-            sigma = self.config.depth_peak_sigma
 
-            alpha = torch.exp(-((t - mu) ** 2) / (2 * sigma ** 2))
-
-
-        else:
-            raise ValueError(f"Unknown depth weight mode: {wmode}")
-
+        metrics_dict["depth_alpha"] = float(alpha.detach().cpu())
         # -------------------------
         # 3. FINAL DEPTH LOSS
         # -------------------------
