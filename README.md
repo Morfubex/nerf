@@ -32,3 +32,10 @@
 Пример запуска (data (...) sdfstudio-data обязательно должны быть в конце!): ns-train depth-nerfacto   --max-num-iterations 30000   --vis tensorboard  --steps-per-eval-all-images 2000  --pipeline.model.depth-loss-mult 0.001 --pipeline.model.depth-supervision L1 --pipeline.model.depth_weight_mode PEAK   --project-name depth-supervision-study  --experiment-name dtu-scan65-depth-nerfacto  --method-name dsnerf-constant   data /media/mrfx/Mrfx/MRFX/Programms/anaconda3/data/sdfstudio/sdfstudio-demo-data/dtu-scan65 sdfstudio-data
 
 Предлагаю протестировать все 4 режима с 4 страгеиями для каждого, итого 16 запусков.
+
+В tensorboard есть куча графиков, нужные нам:
+1) Eval Images/img - визуальное сравнение результатов модели
+2) Eval Images/prop_death - предсказанные карты глубины
+3) Eval Images Metrics: depth_mse - оценка геометрии предсказанной модели, lpips, psnr, ssim - оценка фотореалистичности
+4) всякие loss графики, можно тоже использовать для отчетаа
+5) train metrics dict/depth_alpha - графическое отображение стратегий включения лосса
