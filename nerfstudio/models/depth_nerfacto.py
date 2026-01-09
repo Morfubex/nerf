@@ -72,7 +72,7 @@ class DepthNerfactoModelConfig(NerfactoModelConfig):
     depth_ramp_up_ratio: float = 0.3
     depth_decay_final: float = 0.1
     depth_peak_ratio: float = 0.5
-    depth_peak_width_ratio: float = 0.4
+    depth_peak_width_ratio: float = 0.1
 
 
 
@@ -205,7 +205,7 @@ class DepthNerfactoModel(NerfactoModel):
         wmode = self.config.depth_weight_mode
 
         if wmode == DepthWeightMode.CONSTANT:
-            alpha = 1.0
+            alpha = torch.ones((), device=self.device)
 
         elif wmode == DepthWeightMode.LINEAR:
             ramp_steps = int(self.config.depth_ramp_up_ratio * T)
