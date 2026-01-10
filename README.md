@@ -1,41 +1,177 @@
-Основные изменения коснулись только models/depth_nerfacto, а именно были добавлены функции потерь L1, L2, HUBER, а также стратегии их внедрения в обучение (с постоянным весом, линейном возрастающим, с экспонцианальным затуханием и как гауссово распределение 0->1->0)
+I. НАЗВАНИЕ ПРОЕКТА
+****************
+Исследование учета данных о глубине в функции потерь при обучении NeRF
 
-Для того, чтобы запустить обучение, необходимо:
-1) Поставить себе nerfstudio (см. инструкцию https://docs.nerf.studio/quickstart/installation.html; рекомендуется использовать ОС Linux)
-2) Скачать датасет с имеющимися данными о глубине. Рекомендуется использовать датасет SDFStudio (на нем и было протестировано). Для скачивания датасета необходимо сначала активировать среду nerfstudio, а после прописать "ns-download-data sdfstudio"
-3) Для запуска обучения прописать "ns-train depth-nerfacto data /*путь/dtu-scan65 sdfstudio-data"
 
-Полезные команды:
+II. УЧАСТНИКИ
+****************
+1. Никита Дмитриевич Дискулцу
+2. Дмитрий Игоревич Маслов
 
---vis tensorboard - отключение визуализации и включение графиков, картинок и тп (после обучения можно перейти в меню просмотра командой tensorboard --logdir outputs/)
 
---pipeline.model.depth-supervision (L1/L2/HUBER/DSNERF) - выбор лосс функции
+III.ОПИСАНИЕ ПРОВЕДЕННОГО ИССЛЕДОВАНИЯ
+******************************************
+В рамках проекта исследуется влияние включения данных о глубине сцены (depth information) в функцию потерь при обучении нейронных полей излучения (NeRF).
+Рассматриваются различные способы интеграции depth-сигнала в процесс оптимизации, включая:
 
---pipeline.model.depth_weight_mode (CONSTANT, LINEAR, DECAY, PEAK) - выбор страгеии включения в обучение
+использование различных функций потерь по глубине (L1, L2, Huber);
 
---max-num-iterations 6000 - кол-во шагов
+стратегии взвешивания depth-loss:
+CONSTANT, LINEAR, DECAY (экспоненциальное затухание), PEAK (гауссов профиль 0→1→0).
 
---steps-per-eval-all-images 2000 - интервал построения оценок
+Целью исследования является анализ влияния depth-loss на:
 
---pipeline.model.depth-loss-mult (default 0.001) - коэффициент включения лоссов по глубине в общий лосс
+1. точность восстановления геометрии сцены;
 
---pipeline.model.depth_ramp_up_ratio (default 0.3) - коэффициент для LINEAR стратегии (через сколько шагов (%) выйдет на коэффициент alpha)
+2. фотореалистичность синтезируемых изображений.
 
---pipeline.model.depth_decay_final (default 0.1) - граница экспоненты для DECAY стратегии
+Эксперименты проводятся на реальной сцене с доступной информацией о глубине при:
 
---pipeline.model.depth_peak_ratio (default 0.5) - центр пика для PEAK стратегии
+1. фиксированной архитектуре модели NeRF;
 
---pipeline.model.depth_peak_width_ratio (default 0.4) - ширина пика для PEAK стратегии
+2. одинаковых параметрах обучения;
 
-Больше команд с описанием можно найти по ns-train depth-nerfacto --help
+3. идентичном датасете для всех сравнений.
 
-Пример запуска (data (...) sdfstudio-data обязательно должны быть в конце!): ns-train depth-nerfacto   --max-num-iterations 30000   --vis tensorboard  --steps-per-eval-all-images 2000  --pipeline.model.depth-loss-mult 0.001 --pipeline.model.depth-supervision L1 --pipeline.model.depth_weight_mode PEAK   --project-name depth-supervision-study  --experiment-name dtu-scan65-depth-nerfacto  --method-name dsnerf-constant   data /media/mrfx/Mrfx/MRFX/Programms/anaconda3/data/sdfstudio/sdfstudio-demo-data/dtu-scan65 sdfstudio-data
+Основные изменения реализованы в модуле models/depth_nerfacto, где были добавлены новые функции потерь и механизмы управления их вкладом в общий лосс в процессе обучения.
 
-Предлагаю протестировать все 4 режима с 4 страгеиями для каждого, итого 16 запусков.
+IV.ДЕМОНСТРАЦИЯ
+******************
+Скринкаст с исполнением кода на Youtube: (ДОБАВИТЬ ССЫЛКУ)
 
-В tensorboard есть куча графиков, нужные нам:
-1) Eval Images/img - визуальное сравнение результатов модели
-2) Eval Images/prop_death - предсказанные карты глубины
-3) Eval Images Metrics: depth_mse - оценка геометрии предсказанной модели, lpips, psnr, ssim - оценка фотореалистичности
-4) всякие loss графики, можно тоже использовать для отчетаа
-5) train metrics dict/depth_alpha - графическое отображение стратегий включения лосса
+
+V.УСТАНОВКА И РАЗВЕРТЫВАНИЕ
+*******************************
+Для воспроизведения экспериментов требуется стандартная среда для обучения NeRF-моделей.
+
+Среда выполнения
+
+ОС: Linux
+
+Аппаратное обеспечение: GPU (рекомендуется NVIDIA с CUDA)
+
+Шаги установки:
+
+1. Установить nerfstudio согласно официальной инструкции:
+https://docs.nerf.studio/quickstart/installation.html
+
+2. Установить зависимости (PyTorch, NumPy, tqdm и др.) — автоматически через nerfstudio.
+
+3. Скачать датасет с данными о глубине (используется SDFStudio):
+
+ns-download-data sdfstudio
+
+
+Запуск обучения:
+
+ns-train depth-nerfacto data <path>/dtu-scan65 sdfstudio-data
+
+
+VI.ЗАПУСК И ИСПОЛЬЗОВАНИЕ
+********************
+Пример запуска:
+ns-train depth-nerfacto \
+--max-num-iterations 30000 \
+--vis tensorboard \
+--steps-per-eval-all-images 2000 \
+--pipeline.model.depth-loss-mult 0.001 \
+--pipeline.model.depth-supervision L1 \
+--pipeline.model.depth_weight_mode PEAK \
+--project-name depth-supervision-study \
+--experiment-name dtu-scan65-depth-nerfacto \
+--method-name dsnerf-constant \
+data /media/.../dtu-scan65 sdfstudio-data
+
+NB: data (...) sdfstudio-data должны указываться в конце команды.
+
+
+Основные параметры
+
+--vis tensorboard — логирование метрик и изображений
+
+--pipeline.model.depth-supervision — выбор функции depth-loss
+(L1 / L2 / HUBER / DSNERF)
+
+--pipeline.model.depth_weight_mode — стратегия взвешивания
+(CONSTANT / LINEAR / DECAY / PEAK)
+
+--max-num-iterations — число итераций обучения
+
+--pipeline.model.depth-loss-mult — коэффициент depth-loss
+
+--pipeline.model.depth_ramp_up_ratio — параметр LINEAR стратегии
+
+--pipeline.model.depth_decay_final — нижняя граница DECAY
+
+--pipeline.model.depth_peak_ratio — центр пика PEAK
+
+--pipeline.model.depth_peak_width_ratio — ширина пика PEAK
+
+
+Полный список параметров:
+
+ns-train depth-nerfacto --help
+
+
+
+VII.ОПИСАНИЕ ПОЛУЧЕННЫХ РЕЗУЛЬТАТОВ
+***********************************
+Проведено сравнение методов с постоянным коэффициентом при depth-loss, 
+а также анализ их поведения при различных стратегиях включения глубинной информации в процессе обучения.
+
+Выявлен наиболее устойчивый и эффективный вариант, обеспечивающий улучшение геометрической согласованности реконструкции без деградации фотометрического качества. 
+Результаты сопоставлены по метрикам ошибки глубины и визуальному качеству синтезируемых представлений сцены.
+
+
+Проведено сравнение:
+
+1. различных функций depth-loss при постоянном коэффициенте;
+
+2. стратегий динамического включения depth-информации в процесс обучения.
+
+
+Выявлен наиболее устойчивый и эффективный вариант, обеспечивающий:
+
+1. улучшение геометрической согласованности реконструкции;
+
+2. отсутствие деградации фотометрического качества изображений.
+
+
+Сравнение выполнено по следующим метрикам:
+
+1. depth MSE — среднеквадратичная ошибка глубины;
+
+2. PSNR — Peak Signal-to-Noise Ratio;
+
+3. SSIM — Structural Similarity Index;
+
+4. LPIPS — Learned Perceptual Image Patch Similarity.
+
+
+Описание визуальных материалов
+
+All methods comparison
+~~~~~~~~~~~~~~~~~~~~
+MetComp1.png — depth MSE
+
+MetComp2.png — LPIPS
+
+MetComp3.png — PSNR
+
+MetComp4.png — SSIM
+
+
+
+Constant comparison
+~~~~~~~~~~~~~~~~~~~
+ConstComp1–4.png — метрики
+
+ConstComp.png — пример реконструкции изображения
+
+
+
+DSNeRF strategy comparison
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+StratComp1–4.png — метрики
+
+StratComp5.png — динамика коэффициента depth_alpha
