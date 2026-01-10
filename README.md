@@ -73,6 +73,7 @@ ns-train depth-nerfacto data <path>/dtu-scan65 sdfstudio-data
 VI.ЗАПУСК И ИСПОЛЬЗОВАНИЕ
 ********************
 Пример запуска:
+~~~~~~~~~~~~~~~~~~~~
 ns-train depth-nerfacto \
 --max-num-iterations 30000 \
 --vis tensorboard \
@@ -84,6 +85,7 @@ ns-train depth-nerfacto \
 --experiment-name dtu-scan65-depth-nerfacto \
 --method-name dsnerf-constant \
 data /media/.../dtu-scan65 sdfstudio-data
+~~~~~~~~~~~~~~~~~~~~
 
 NB: data (...) sdfstudio-data должны указываться в конце команды.
 
