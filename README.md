@@ -158,26 +158,39 @@ VII.ОПИСАНИЕ ПОЛУЧЕННЫХ РЕЗУЛЬТАТОВ
 
 All methods comparison
 ~~~~~~~~~~~~~~~~~~~~
-MetComp1.png — depth MSE
+![Depth MSE](https://github.com/Morfubex/nerf/blob/mini-nerfacto/pictures/all%20methods%20comparison/depth_mse.png)
 
-MetComp2.png — LPIPS
+![LPIPS](https://github.com/Morfubex/nerf/blob/mini-nerfacto/pictures/all%20methods%20comparison/lpips.png)
 
-MetComp3.png — PSNR
+![PSNR](https://github.com/Morfubex/nerf/blob/mini-nerfacto/pictures/all%20methods%20comparison/psnr.png)
 
-MetComp4.png — SSIM
+![SSIM](https://github.com/Morfubex/nerf/blob/mini-nerfacto/pictures/all%20methods%20comparison/ssim.png)
 
 
 
 Constant comparison
 ~~~~~~~~~~~~~~~~~~~
-ConstComp1–4.png — метрики
+![Depth alpha](https://github.com/Morfubex/nerf/blob/mini-nerfacto/pictures/constant%20comparison/depth_alpha.png)
 
-ConstComp.png — пример реконструкции изображения
+![Depth MSE](https://github.com/Morfubex/nerf/blob/mini-nerfacto/pictures/constant%20comparison/depth_mse.png)
 
+![LPIPS](https://github.com/Morfubex/nerf/blob/mini-nerfacto/pictures/constant%20comparison/lpips.png)
+
+![PSNR](https://github.com/Morfubex/nerf/blob/mini-nerfacto/pictures/constant%20comparison/psnr.png)
+
+![SSIM](https://github.com/Morfubex/nerf/blob/mini-nerfacto/pictures/constant%20comparison/ssim.png)
+
+![Результаты](https://github.com/Morfubex/nerf/blob/mini-nerfacto/pictures/constant%20comparison/results.png)
 
 
 DSNeRF strategy comparison
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
-StratComp1–4.png — метрики
+![Depth alpha](https://github.com/Morfubex/nerf/blob/mini-nerfacto/pictures/dsnerf%strategy%comparison/depth_alpha.png)
 
-StratComp5.png — динамика коэффициента depth_alpha
+![Depth MSE](https://github.com/Morfubex/nerf/blob/mini-nerfacto/pictures/dsnerf%strategy%comparison/depth_mse.png)
+
+![LPIPS](https://github.com/Morfubex/nerf/blob/mini-nerfacto/pictures/dsnerf%strategy%comparison/lpips.png)
+
+![PSNR](https://github.com/Morfubex/nerf/blob/mini-nerfacto/pictures/dsnerf%strategy%comparison/psnr.png)
+
+![SSIM](https://github.com/Morfubex/nerf/blob/mini-nerfacto/pictures/dsnerf%strategy%comparison/ssim.png)
