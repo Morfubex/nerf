@@ -145,7 +145,7 @@ VII.ОПИСАНИЕ ПОЛУЧЕННЫХ РЕЗУЛЬТАТОВ
 
 Сравнение выполнено по следующим метрикам:
 
-1. depth MSE — среднеквадратичная ошибка глубины;
+1. depth MSE — ошибка глубины;
 
 2. PSNR — Peak Signal-to-Noise Ratio;
 
@@ -158,41 +158,15 @@ VII.ОПИСАНИЕ ПОЛУЧЕННЫХ РЕЗУЛЬТАТОВ
 
 All methods comparison
 ~~~~~~~~~~~~~~~~~~~~
-![Depth MSE](https://github.com/Morfubex/nerf/blob/mini-nerfacto/pictures/all%20methods%20comparison/depth_mse.png)
-
-![LPIPS](https://github.com/Morfubex/nerf/blob/mini-nerfacto/pictures/all%20methods%20comparison/lpips.png)
-
-![PSNR](https://github.com/Morfubex/nerf/blob/mini-nerfacto/pictures/all%20methods%20comparison/psnr.png)
-
-![SSIM](https://github.com/Morfubex/nerf/blob/mini-nerfacto/pictures/all%20methods%20comparison/ssim.png)
-
-
+СМ. nerf/pictures/all method comparison
+На графииках представлено сравнение абсолютно всех обученных моделей. Слева снизу можно в названии обучения увидеть название модели "...dsnerf-constant", означающее, что это модель с DSNERF и постоянным коэффициентом включения. Сверху - метрика, слева снизу - значение метрики.
 
 Constant comparison
 ~~~~~~~~~~~~~~~~~~~
-![Depth alpha](https://github.com/Morfubex/nerf/blob/mini-nerfacto/pictures/constant%20comparison/depth_alpha.png)
-
-![Depth MSE](https://github.com/Morfubex/nerf/blob/mini-nerfacto/pictures/constant%20comparison/depth_mse.png)
-
-![LPIPS](https://github.com/Morfubex/nerf/blob/mini-nerfacto/pictures/constant%20comparison/lpips.png)
-
-![PSNR](https://github.com/Morfubex/nerf/blob/mini-nerfacto/pictures/constant%20comparison/psnr.png)
-
-![SSIM](https://github.com/Morfubex/nerf/blob/mini-nerfacto/pictures/constant%20comparison/ssim.png)
-
-![Результаты](https://github.com/Morfubex/nerf/blob/mini-nerfacto/pictures/constant%20comparison/results.png)
-
+СМ. nerf/pictures/constant comparison
+На графиках представлено сравнение моделей с постоянным коэффициентом включения.
 
 DSNeRF strategy comparison
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
-![Depth alpha](https://github.com/Morfubex/nerf/blob/mini-nerfacto/pictures/dsnerf%strategy%comparison/depth_alpha.png)
-
-![Depth MSE](https://github.com/Morfubex/nerf/blob/mini-nerfacto/pictures/dsnerf%strategy%comparison/depth_mse.png)
-
-![LPIPS](https://github.com/Morfubex/nerf/blob/mini-nerfacto/pictures/dsnerf%strategy%comparison/lpips.png)
-
-![PSNR](https://github.com/Morfubex/nerf/blob/mini-nerfacto/pictures/dsnerf%strategy%comparison/psnr.png)
-
-![SSIM](https://github.com/Morfubex/nerf/blob/mini-nerfacto/pictures/dsnerf%strategy%comparison/ssim.png)
-
-DASDSA
+СМ. nerf/pictures/depth strategy comparison
+На графиках представлено сравнение модели DSNERF с разными стратегиями включения коэффициента.
