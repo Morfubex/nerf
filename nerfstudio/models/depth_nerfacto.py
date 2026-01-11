@@ -16,13 +16,15 @@
 Nerfacto augmented with depth supervision.
 """
 
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Dict, Tuple, Type
+from typing import Dict, Tuple, Type, Optional
 
 import numpy as np
 import torch
+from enum import Enum
 
 from nerfstudio.cameras.rays import RayBundle
 from nerfstudio.model_components import losses
@@ -31,12 +33,23 @@ from nerfstudio.models.nerfacto import NerfactoModel, NerfactoModelConfig
 from nerfstudio.utils import colormaps
 
 
+class DepthSupervisionMode(str, Enum):
+    DSNERF = "dsnerf"
+    L1 = "l1"
+    L2 = "l2"
+    HUBER = "huber"
+    
+class DepthWeightMode(str, Enum):
+    CONSTANT = "constant"
+    LINEAR = "linear"
+    DECAY = "decay"
+    PEAK = "peak"
+
 @dataclass
 class DepthNerfactoModelConfig(NerfactoModelConfig):
     """Additional parameters for depth supervision."""
 
     _target: Type = field(default_factory=lambda: DepthNerfactoModel)
-    depth_loss_mult: float = 1e-3
     """Lambda of the depth loss."""
     is_euclidean_depth: bool = False
     """Whether input depth maps are Euclidean distances (or z-distances)."""
@@ -51,6 +64,17 @@ class DepthNerfactoModelConfig(NerfactoModelConfig):
     depth_loss_type: DepthLossType = DepthLossType.DS_NERF
     """Depth loss type. Note that `PairPixelSampler` has to be used for `DepthLossType.SPARSENERF_RANKING`
     to work as expected."""
+    depth_supervision: DepthSupervisionMode = DepthSupervisionMode.DSNERF
+    depth_loss_mult: float = 1e-3
+    huber_delta: float = 0.05
+    
+    depth_weight_mode: DepthWeightMode = DepthWeightMode.CONSTANT
+    depth_ramp_up_ratio: float = 0.3
+    depth_decay_final: float = 0.1
+    depth_peak_ratio: float = 0.5
+    depth_peak_width_ratio: float = 0.1
+
+
 
 
 class DepthNerfactoModel(NerfactoModel):
@@ -62,14 +86,20 @@ class DepthNerfactoModel(NerfactoModel):
 
     config: DepthNerfactoModelConfig
 
+
     def populate_modules(self):
         """Set the fields and modules."""
         super().populate_modules()
 
+        self.max_steps: Optional[int] = None
+        
         if self.config.should_decay_sigma:
             self.depth_sigma = torch.tensor([self.config.starting_depth_sigma])
         else:
             self.depth_sigma = torch.tensor([self.config.depth_sigma])
+        
+    def set_max_steps(self, max_steps: int):
+        self.max_steps = max_steps
 
     def get_outputs(self, ray_bundle: RayBundle):
         outputs = super().get_outputs(ray_bundle)
@@ -79,6 +109,8 @@ class DepthNerfactoModel(NerfactoModel):
 
     def get_metrics_dict(self, outputs, batch):
         metrics_dict = super().get_metrics_dict(outputs, batch)
+        
+        
         if self.training:
             if (
                 losses.FORCE_PSEUDODEPTH_LOSS
@@ -113,17 +145,94 @@ class DepthNerfactoModel(NerfactoModel):
 
     def get_loss_dict(self, outputs, batch, metrics_dict=None):
         loss_dict = super().get_loss_dict(outputs, batch, metrics_dict)
-        if self.training:
-            assert metrics_dict is not None and ("depth_loss" in metrics_dict or "depth_ranking" in metrics_dict)
+
+        if not self.training:
+            return loss_dict
+
+        assert metrics_dict is not None
+
+        pred_depth = outputs["depth"]
+        gt_depth = batch["depth_image"].to(self.device)
+        depth_mask = gt_depth > 0
+
+        assert self.max_steps is not None, "max_steps not initialized"
+
+        T = self.max_steps
+        t = torch.tensor(float(self.step), device=self.device)
+        
+        # -------------------------
+        # 1. DEPTH LOSS COMPUTATION
+        # -------------------------
+        mode = self.config.depth_supervision
+
+        if mode == DepthSupervisionMode.DSNERF:
+            assert "depth_loss" in metrics_dict or "depth_ranking" in metrics_dict
+
+            depth_loss = metrics_dict.get(
+                "depth_loss", torch.tensor(0.0, device=self.device)
+            )
+
             if "depth_ranking" in metrics_dict:
+                rank_weight = np.interp(self.step, [0, 2000], [0, 0.2])
                 loss_dict["depth_ranking"] = (
-                    self.config.depth_loss_mult
-                    * np.interp(self.step, [0, 2000], [0, 0.2])
-                    * metrics_dict["depth_ranking"]
+                    rank_weight * self.config.depth_loss_mult * metrics_dict["depth_ranking"]
                 )
-            if "depth_loss" in metrics_dict:
-                loss_dict["depth_loss"] = self.config.depth_loss_mult * metrics_dict["depth_loss"]
+
+        elif mode == DepthSupervisionMode.L1:
+            depth_loss = torch.abs(
+                pred_depth[depth_mask] - gt_depth[depth_mask]
+            ).mean()
+
+        elif mode == DepthSupervisionMode.L2:
+            depth_loss = torch.nn.functional.mse_loss(
+                pred_depth[depth_mask],
+                gt_depth[depth_mask],
+            )
+
+        elif mode == DepthSupervisionMode.HUBER:
+            depth_loss = torch.nn.functional.smooth_l1_loss(
+                pred_depth[depth_mask],
+                gt_depth[depth_mask],
+                beta=self.config.huber_delta,
+            )
+
+        else:
+            raise ValueError(f"Unknown depth supervision mode: {mode}")
+
+        # -------------------------
+        # 2. DEPTH WEIGHT STRATEGY
+        # -------------------------
+        wmode = self.config.depth_weight_mode
+
+        if wmode == DepthWeightMode.CONSTANT:
+            alpha = torch.ones((), device=self.device)
+
+        elif wmode == DepthWeightMode.LINEAR:
+            ramp_steps = int(self.config.depth_ramp_up_ratio * T)
+            alpha = torch.clamp(t / max(1, ramp_steps), max=1.0)
+
+
+        elif wmode == DepthWeightMode.DECAY:
+            alpha = torch.exp(
+                torch.log(torch.tensor(self.config.depth_decay_final, device=self.device))
+                * (t / T)
+            )
+
+        elif wmode == DepthWeightMode.PEAK:
+            peak_step = self.config.depth_peak_ratio * T
+            sigma = self.config.depth_peak_width_ratio * T
+            alpha = torch.exp(
+                -((t - peak_step) ** 2) / (2 * sigma ** 2)
+            )
+
+        metrics_dict["depth_alpha"] = float(alpha.detach().cpu())
+        # -------------------------
+        # 3. FINAL DEPTH LOSS
+        # -------------------------
+        loss_dict["depth_loss"] = alpha * self.config.depth_loss_mult * depth_loss
+
         return loss_dict
+
 
     def get_image_metrics_and_images(
         self, outputs: Dict[str, torch.Tensor], batch: Dict[str, torch.Tensor]

@@ -19,9 +19,11 @@ Put all the method implementations in one location.
 from __future__ import annotations
 
 from collections import OrderedDict
-from typing import Dict, Union
+from typing import Dict, Union, Literal
 
 import tyro
+
+from enum import Enum
 
 from nerfstudio.cameras.camera_optimizers import CameraOptimizerConfig
 from nerfstudio.configs.base_config import ViewerConfig
