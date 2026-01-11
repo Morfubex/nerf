@@ -156,17 +156,11 @@ VII.ОПИСАНИЕ ПОЛУЧЕННЫХ РЕЗУЛЬТАТОВ
 
 Описание визуальных материалов
 
-All methods comparison
-~~~~~~~~~~~~~~~~~~~~
-СМ. nerf/pictures/all method comparison
+All methods comparison (см. nerf/pictures/all method comparison).
 На графииках представлено сравнение абсолютно всех обученных моделей. Слева снизу можно в названии обучения увидеть название модели "...dsnerf-constant", означающее, что это модель с DSNERF и постоянным коэффициентом включения. Сверху - метрика, слева снизу - значение метрики.
 
-Constant comparison
-~~~~~~~~~~~~~~~~~~~
-СМ. nerf/pictures/constant comparison
+Constant comparison (см. nerf/pictures/constant comparison).
 На графиках представлено сравнение моделей с постоянным коэффициентом включения.
 
-DSNeRF strategy comparison
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-СМ. nerf/pictures/depth strategy comparison
+DSNeRF strategy comparison (см. nerf/pictures/depth strategy comparison).
 На графиках представлено сравнение модели DSNERF с разными стратегиями включения коэффициента.
