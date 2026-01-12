@@ -184,7 +184,8 @@ PSNR
 SSIM
 ![plot](https://github.com/Morfubex/nerf/blob/mini-nerfacto/pictures/constant%20comparison/ssim.png)
 
-Результаты
+Результаты работы dsnerf-constant:
+
 ![plot](https://github.com/Morfubex/nerf/blob/mini-nerfacto/pictures/constant%20comparison/results.png)
 
 
