@@ -153,3 +153,58 @@ Constant comparison (см. nerf/pictures/constant comparison).
 
 DSNeRF strategy comparison (см. nerf/pictures/depth strategy comparison).
 На графиках представлено сравнение модели DSNERF с разными стратегиями включения коэффициента.
+
+All methods comparison
+**************
+Depth MSE
+![plot](https://github.com/Morfubex/nerf/blob/mini-nerfacto/pictures/all%20methods%20comparison/depth_mse.png)
+
+LPIPS
+![plot](https://github.com/Morfubex/nerf/blob/mini-nerfacto/pictures/all%20methods%20comparison/lpips.png)
+
+PSNR
+![plot](https://github.com/Morfubex/nerf/blob/mini-nerfacto/pictures/all%20methods%20comparison/psnr.png)
+
+SSIM
+![plot](https://github.com/Morfubex/nerf/blob/mini-nerfacto/pictures/all%20methods%20comparison/ssim.png)
+
+
+
+Constant comparison
+**************
+Depth alpha
+![plot](https://github.com/Morfubex/nerf/blob/mini-nerfacto/pictures/constant%20comparison/depth_alpha.png)
+
+Depth MSE
+![plot](https://github.com/Morfubex/nerf/blob/mini-nerfacto/pictures/constant%20comparison/depth_mse.png)
+
+LPIPS
+![plot](https://github.com/Morfubex/nerf/blob/mini-nerfacto/pictures/constant%20comparison/lpips.png)
+
+PSNR
+![plot](https://github.com/Morfubex/nerf/blob/mini-nerfacto/pictures/constant%20comparison/psnr.png)
+
+SSIM
+![plot](https://github.com/Morfubex/nerf/blob/mini-nerfacto/pictures/constant%20comparison/ssim.png)
+
+Результаты
+![plot](https://github.com/Morfubex/nerf/blob/mini-nerfacto/pictures/constant%20comparison/results.png)
+
+
+DSNeRF strategy comparison
+**************
+
+Depth alpha
+![plot](https://github.com/Morfubex/nerf/blob/mini-nerfacto/pictures/dsnerf%20strategy%20comparison/depth_alpha.png)
+
+Depth MSE
+![plot](https://github.com/Morfubex/nerf/blob/mini-nerfacto/pictures/dsnerf%20strategy%20comparison/depth_mse.png)
+
+LPIPS
+![plot](https://github.com/Morfubex/nerf/blob/mini-nerfacto/pictures/dsnerf%20strategy%20comparison/lpips.png)
+
+PSNR
+![plot](https://github.com/Morfubex/nerf/blob/mini-nerfacto/pictures/dsnerf%20strategy%20comparison/psnr.png)
+
+SSIM
+![plot](https://github.com/Morfubex/nerf/blob/mini-nerfacto/pictures/dsnerf%20strategy%20comparison/ssim.png)
