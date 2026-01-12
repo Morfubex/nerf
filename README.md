@@ -145,17 +145,12 @@ VII.ОПИСАНИЕ ПОЛУЧЕННЫХ РЕЗУЛЬТАТОВ
 
 Описание визуальных материалов
 
-All methods comparison (см. nerf/pictures/all method comparison).
-На графииках представлено сравнение абсолютно всех обученных моделей. Слева снизу можно в названии обучения увидеть название модели "...dsnerf-constant", означающее, что это модель с DSNERF и постоянным коэффициентом включения. Сверху - метрика, слева снизу - значение метрики.
-
-Constant comparison (см. nerf/pictures/constant comparison).
-На графиках представлено сравнение моделей с постоянным коэффициентом включения.
-
-DSNeRF strategy comparison (см. nerf/pictures/depth strategy comparison).
-На графиках представлено сравнение модели DSNERF с разными стратегиями включения коэффициента.
 
 All methods comparison
 **************
+
+На графииках представлено сравнение абсолютно всех обученных моделей. Слева снизу можно в названии обучения увидеть название модели "...dsnerf-constant", означающее, что это модель с DSNERF и постоянным коэффициентом включения. Сверху - метрика, слева снизу - значение метрики.
+
 Depth MSE
 ![plot](https://github.com/Morfubex/nerf/blob/mini-nerfacto/pictures/all%20methods%20comparison/depth_mse.png)
 
@@ -172,6 +167,8 @@ SSIM
 
 Constant comparison
 **************
+На графиках представлено сравнение моделей с постоянным коэффициентом включения.
+
 Depth alpha
 ![plot](https://github.com/Morfubex/nerf/blob/mini-nerfacto/pictures/constant%20comparison/depth_alpha.png)
 
@@ -193,6 +190,8 @@ SSIM
 
 DSNeRF strategy comparison
 **************
+
+На графиках представлено сравнение модели DSNERF с разными стратегиями включения коэффициента.
 
 Depth alpha
 ![plot](https://github.com/Morfubex/nerf/blob/mini-nerfacto/pictures/dsnerf%20strategy%20comparison/depth_alpha.png)
