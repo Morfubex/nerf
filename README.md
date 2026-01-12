@@ -169,7 +169,7 @@ Constant comparison
 **************
 На графиках представлено сравнение моделей с постоянным коэффициентом включения.
 
-Depth alpha
+Depth alpha - коэффициент при постоянной стратегии включения
 ![plot](https://github.com/Morfubex/nerf/blob/mini-nerfacto/pictures/constant%20comparison/depth_alpha.png)
 
 Depth MSE
@@ -194,7 +194,7 @@ DSNeRF strategy comparison
 
 На графиках представлено сравнение модели DSNERF с разными стратегиями включения коэффициента.
 
-Depth alpha
+Depth alpha - коэффициенты при различных стратегиях включения
 ![plot](https://github.com/Morfubex/nerf/blob/mini-nerfacto/pictures/dsnerf%20strategy%20comparison/depth_alpha.png)
 
 Depth MSE
